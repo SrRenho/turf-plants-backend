@@ -1,7 +1,6 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from .models import Pixel, Player
 
 class PixelConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -33,6 +32,8 @@ class PixelConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event["pixel"]))
 
     async def save_pixel(self, data):
+        from .models import Pixel, Player
+
         user = self.scope["user"]
         player = await database_sync_to_async(Player.objects.get)(user=user)
         # You can also handle description and other fields here
