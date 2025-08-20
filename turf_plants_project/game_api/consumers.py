@@ -9,21 +9,12 @@ class PixelConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         user = self.scope["user"]
-
         if not user.is_authenticated:
             await self.send(text_data=json.dumps({"error": "Authenticate first"}))
             return
 
-        data = json.loads(text_data)  # contains only x, y
-        pixel = await self.save_pixel(data)  # save pixel
-
-        pixel_data = {
-            "x": pixel.x,
-            "y": pixel.y,
-            "owner": pixel.owner.user.username if pixel.owner else "Unknown",
-            "description": pixel.description,
-            "planted_on": pixel.planted_on.isoformat() if pixel.planted_on else "",
-        }
+        data = json.loads(text_data)
+        pixel_data = await self.save_pixel(data)  # <- now returns a dict, not a model
 
         await self.channel_layer.group_send(
             "pixels",
@@ -37,22 +28,33 @@ class PixelConsumer(AsyncWebsocketConsumer):
         from .models import Pixel, Player
 
         user = self.scope["user"]
+        player, _ = await database_sync_to_async(Player.objects.get_or_create)(user=user)
 
+        defaults = {"description": data.get("description", "")}
 
-        real_user = user._wrapped if hasattr(user, "_wrapped") else user
-        player, _ = await database_sync_to_async(Player.objects.get_or_create)(user=real_user)
-
-        defaults = {"owner": player}
-
-        # Only set description if present, otherwise leave blank
-        if "description" in data:
-            defaults["description"] = data["description"]
-
-        def _update_or_create():
-            return Pixel.objects.update_or_create(
-                x=data["x"], y=data["y"], defaults=defaults
+        def _update_and_serialize():
+            # If you want to prevent other players overwriting pixels, include owner=player
+            # in the filter; here we set owner in defaults (which will overwrite owner if pixel exists).
+            pixel, created = Pixel.objects.update_or_create(
+                x=data["x"],
+                y=data["y"],
+                defaults={**defaults, "owner": player}
             )
 
-        pixel, _ = await database_sync_to_async(_update_or_create)()
-        return pixel
+            # Make sure to access related fields (owner.user.username) while still in sync
+            owner_username = None
+            if pixel.owner_id:
+                # pixel.owner is a Player instance; access its user.username here (sync)
+                owner_username = pixel.owner.user.username
+
+            return {
+                "x": pixel.x,
+                "y": pixel.y,
+                "owner": owner_username or player.user.username,
+                "description": pixel.description,
+                "planted_on": pixel.planted_on.isoformat() if pixel.planted_on else "",
+            }
+
+        pixel_data = await database_sync_to_async(_update_and_serialize)()
+        return pixel_data
 
