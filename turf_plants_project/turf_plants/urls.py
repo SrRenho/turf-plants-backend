@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from accounts.views import GoogleIDTokenLogin
 from django_channels_jwt.views import AsgiValidateTokenView
+from .views import ping
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -9,4 +10,5 @@ urlpatterns = [
     path('google-login/', GoogleIDTokenLogin.as_view(), name='google_id_token_login'),
     path('game_api/', include('game_api.urls')),
     path("api/auth/token/", AsgiValidateTokenView.as_view(), name="validate-token"),
+    path('ping/', ping, name='ping'),
 ]

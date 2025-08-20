@@ -1,7 +1,6 @@
-from django_channels_jwt.shortcuts import create_token
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def get_ws_token(request):
-    uuid = create_token(request.user)  # binds user to a UUID in cache
-    return Response({"ws_uuid": str(uuid)})
+@api_view(['GET'])
+def ping(request):
+    return Response({"status": "ok"})
