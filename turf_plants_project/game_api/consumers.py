@@ -30,7 +30,7 @@ class PixelConsumer(AsyncWebsocketConsumer):
         user = self.scope["user"]
         player, _ = await database_sync_to_async(Player.objects.get_or_create)(user=user)
 
-        defaults = {"description": data.get("description", "")}
+        defaults = {"description": "fui creado con WS socket"}
 
         def _update_and_serialize():
             # If you want to prevent other players overwriting pixels, include owner=player
