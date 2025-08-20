@@ -7,4 +7,5 @@ urlpatterns = [
     path('dj-rest-auth/', include('dj_rest_auth.urls')),
     path('google-login/', GoogleIDTokenLogin.as_view(), name='google_id_token_login'),
     path('game_api/', include('game_api.urls')),
+    path("api/auth/", include('django_channels_jwt.urls')),
 ]
