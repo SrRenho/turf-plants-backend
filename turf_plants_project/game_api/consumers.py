@@ -7,22 +7,22 @@ class PixelConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add("pixels", self.channel_name)
         await self.accept()
 
-    async def disconnect(self, close_code):
-        await self.channel_layer.group_discard("pixels", self.channel_name)
-
     async def receive(self, text_data):
+        user = self.scope["user"]
+        if not user.is_authenticated:
+            await self.send(json.dumps({"error": "Authenticate first"}))
+            return
+
         data = json.loads(text_data)
-        # Save pixel to DB
-        pixel = await self.save_pixel(data)
-        # Prepare pixel data for broadcast (include all relevant fields)
+        pixel = await self.save_pixel(user, data)
         pixel_data = {
             "x": pixel.x,
             "y": pixel.y,
-            "owner__user__username": pixel.owner.user.username if pixel.owner else "Unknown",
+            "owner": pixel.owner.user.username if pixel.owner else "Unknown",
             "description": pixel.description,
             "planted_on": pixel.planted_on.isoformat() if pixel.planted_on else "",
         }
-        # Broadcast to all clients
+
         await self.channel_layer.group_send(
             "pixels",
             {"type": "pixel.update", "pixel": pixel_data}
@@ -35,13 +35,15 @@ class PixelConsumer(AsyncWebsocketConsumer):
         from .models import Pixel, Player
 
         user = self.scope["user"]
-        player = await database_sync_to_async(Player.objects.get)(user=user)
-        # You can also handle description and other fields here
-        defaults = {
-            "owner": player,
-            "description": data.get("description", ""),
-        }
-        pixel, _ = await database_sync_to_async(Pixel.objects.update_or_create)(
-            x=data["x"], y=data["y"], defaults=defaults
-        )
+        real_user = user._wrapped if hasattr(user, "_wrapped") else user
+        player, _ = await database_sync_to_async(Player.objects.get_or_create)(user=real_user)
+
+        defaults = {"owner": player, "description": data.get("description", "")}
+
+        def _update_or_create():
+            return Pixel.objects.update_or_create(
+                x=data["x"], y=data["y"], defaults=defaults
+            )
+
+        pixel, _ = await database_sync_to_async(_update_or_create)()
         return pixel

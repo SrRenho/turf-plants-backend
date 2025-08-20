@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 class Pixel(models.Model):
     x = models.IntegerField()
     y = models.IntegerField()
-    owner = models.ForeignKey('Player', on_delete=models.CASCADE, related_name='pixels', null=True)
+    owner = models.ForeignKey('Player', on_delete=models.CASCADE, related_name='pixels')
     description = models.TextField(blank=True, default="")
     planted_on = models.DateTimeField(auto_now_add=True)
 
