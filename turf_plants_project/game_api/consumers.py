@@ -9,12 +9,14 @@ class PixelConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         user = self.scope["user"]
+
         if not user.is_authenticated:
-            await self.send(json.dumps({"error": "Authenticate first"}))
+            await self.send(text_data=json.dumps({"error": "Authenticate first"}))
             return
 
-        data = json.loads(text_data)
-        pixel = await self.save_pixel(user, data)
+        data = json.loads(text_data)  # contains only x, y
+        pixel = await self.save_pixel(data)  # save pixel
+
         pixel_data = {
             "x": pixel.x,
             "y": pixel.y,
@@ -35,10 +37,16 @@ class PixelConsumer(AsyncWebsocketConsumer):
         from .models import Pixel, Player
 
         user = self.scope["user"]
+
+
         real_user = user._wrapped if hasattr(user, "_wrapped") else user
         player, _ = await database_sync_to_async(Player.objects.get_or_create)(user=real_user)
 
-        defaults = {"owner": player, "description": data.get("description", "")}
+        defaults = {"owner": player}
+
+        # Only set description if present, otherwise leave blank
+        if "description" in data:
+            defaults["description"] = data["description"]
 
         def _update_or_create():
             return Pixel.objects.update_or_create(
@@ -47,3 +55,4 @@ class PixelConsumer(AsyncWebsocketConsumer):
 
         pixel, _ = await database_sync_to_async(_update_or_create)()
         return pixel
+
