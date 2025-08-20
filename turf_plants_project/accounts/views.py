@@ -6,6 +6,7 @@ from google.auth.transport import requests
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from decouple import config
+from game_api.models import Player
 
 class GoogleIDTokenLogin(APIView):
     def post(self, request):
@@ -15,6 +16,9 @@ class GoogleIDTokenLogin(APIView):
             # idinfo has 'email', 'sub', 'name', etc.
             email = idinfo['email']
             user, created = User.objects.get_or_create(email=email, defaults={'username': email.split('@')[0], 'first_name': idinfo.get('given_name', '')})
+
+            if created:
+                Player.objects.create(user=user)
 
             refresh = RefreshToken.for_user(user)
             return Response({
