@@ -20,6 +20,7 @@ def get_pixels(request):
 @api_view(['POST'])
 def paint_pixel(request):
     x, y = request.data.get('x'), request.data.get('y')
+    description = request.data.get('description')
     if x is None or y is None:
         return Response({'error': 'x and y required'}, status=400)
 
@@ -29,7 +30,7 @@ def paint_pixel(request):
         y=y,
         defaults={
             'owner': player,
-            'description': "fui creado con post",
+            'description': description,
         }
     )
 
