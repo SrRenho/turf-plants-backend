@@ -48,11 +48,18 @@ def paint_pixel(request):
 
     return Response(pixel_data)
 
+import logging
+
+log = logging.getLogger(__name__)
 
 @api_view(['POST'])
 @authentication_classes([])
 def award_hourly_xp(request):
-    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    raw = request.headers.get("Authorization") or request.META.get("HTTP_AUTHORIZATION") or ""
+    token = raw.replace("Bearer ", "").strip()
+
+    # logging is more reliable than print in prod
+    log.info("cron token received=%r match=%s", token, token == config("ADMIN_TOKEN"))
     if token == config('ADMIN_TOKEN'):
         updated = Pixel.objects.update(total_xp=F('total_xp') + 1)
         return Response({"success": True, "updated_pixels": updated})
