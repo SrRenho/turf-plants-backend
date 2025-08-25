@@ -51,7 +51,7 @@ def paint_pixel(request):
 @authentication_classes([])
 def award_hourly_xp(request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
-    if token == config('ADMIN_TOKEN')):
+    if token == config('ADMIN_TOKEN'):
         updated = Pixel.objects.update(total_xp=F('total_xp') + 1)
         return Response({"success": True, "updated_pixels": updated})
 
