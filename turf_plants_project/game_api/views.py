@@ -48,11 +48,15 @@ def paint_pixel(request):
 
     return Response(pixel_data)
 
+log = logging.getLogger(__name__)
+
 @api_view(['POST'])
 @authentication_classes([])
 def award_hourly_xp(request):
-    print("HOLAAA",config('ADMIN_TOKEN'))
+    log.info("HOLAAA",config('ADMIN_TOKEN'))
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    log.info("ASJDAKSJDKJA",token)
+    log.info("UWUWU",token==config('ADMIN_TOKEN'))
     if token == config('ADMIN_TOKEN'):
         updated = Pixel.objects.update(total_xp=F('total_xp') + 1)
         return Response({"success": True, "updated_pixels": updated})
