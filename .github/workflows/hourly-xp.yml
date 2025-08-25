@@ -9,6 +9,6 @@ jobs:
     steps:
       - name: POST award xp
         run: |
-          curl -X POST "${{ secrets.API_URL }}/game_api/award_hourly_xp/" \
+          curl -X POST "${{ secrets.API_URL }}/game_api/award_hourly_xp" \
             -H "Authorization: Bearer ${{ secrets.API_TOKEN }}" \
             -H "Content-Type: application/json"
