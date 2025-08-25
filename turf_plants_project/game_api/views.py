@@ -62,6 +62,6 @@ class CronTokenPermission(BasePermission):
 def award_hourly_xp(request):
     updated = Pixel.objects.update(total_xp=F('total_xp') + 1)
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
-    print("i received",token)
+    print("i received",token, "which is the same as", config('ADMIN_TOKEN'),"???", token == config('ADMIN_TOKEN'))
     return Response({"success": True, "updated_pixels": updated})
 
