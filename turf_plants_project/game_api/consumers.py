@@ -15,7 +15,7 @@ class PixelConsumer(AsyncWebsocketConsumer):
             return
 
         data = json.loads(text_data)
-        pixel_data = await self.save_pixel(data)  # <- now returns a dict, not a model
+        pixel_data = await self.save_pixel(data)
 
         await self.channel_layer.group_send(
             "pixels",
@@ -31,35 +31,37 @@ class PixelConsumer(AsyncWebsocketConsumer):
         user = self.scope["user"]
         player, _ = await database_sync_to_async(Player.objects.get_or_create)(user=user)
 
+        if player.seeds < 1:
+            # Return an error instead of saving
+            return {"error": "Not enough seeds"}
+
         defaults = {"description": data['description']}
 
         def _update_and_serialize():
-            # If you want to prevent other players overwriting pixels, include owner=player
-            # in the filter; here we set owner in defaults (which will overwrite owner if pixel exists).
             pixel, created = Pixel.objects.update_or_create(
                 x=data["x"],
                 y=data["y"],
                 defaults={**defaults, "owner": player}
             )
 
-            # Make sure to access related fields (owner.user.username) while still in sync
-            owner_username = None
-            if pixel.owner_id:
-                # pixel.owner is a Player instance; access its user.username here (sync)
-                owner_username = pixel.owner.user.username
+            # Only deduct a seed if a new pixel was created
+            if created:
+                player.seeds -= 1
+                player.save()
 
+            owner_username = pixel.owner.user.username if pixel.owner_id else player.user.username
             level, xp_into_level, xp_until_next = xp_progress(pixel.total_xp)
 
             return {
                 "x": pixel.x,
                 "y": pixel.y,
-                "owner": owner_username or player.user.username,
+                "owner": owner_username,
                 "description": pixel.description,
                 "planted_on": pixel.planted_on.isoformat() if pixel.planted_on else "",
                 "total_xp": pixel.total_xp,
-                'level': level,
-                'xp_into_level': xp_into_level,
-                'xp_until_next': xp_until_next,
+                "level": level,
+                "xp_into_level": xp_into_level,
+                "xp_until_next": xp_until_next,
             }
 
         pixel_data = await database_sync_to_async(_update_and_serialize)()

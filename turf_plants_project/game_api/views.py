@@ -45,6 +45,10 @@ def paint_pixel(request):
         return Response({'error': 'x and y required'}, status=400)
 
     player = Player.objects.get(user=request.user)
+
+    if player.seeds < 1:
+        return Response({'error': 'Not enough seeds'}, status=400)
+
     pixel, created = Pixel.objects.get_or_create(
         x=x,
         y=y,
@@ -54,9 +58,13 @@ def paint_pixel(request):
         }
     )
 
+    # only remove a seed if the pixel was actually created
+    if created:
+        player.seeds -= 1
+        player.save()
+
     level, xp_into_level, xp_until_next = xp_progress(pixel.total_xp)
 
-    # format like GET
     pixel_data = {
         'x': pixel.x,
         'y': pixel.y,

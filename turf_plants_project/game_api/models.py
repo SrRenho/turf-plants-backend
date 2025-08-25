@@ -20,6 +20,7 @@ class Pixel(models.Model):
 
 class Player(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    seeds = models.IntegerField(default=3)
 
     def __str__(self):
         return f"{self.user.username} (Level {self.level})"
