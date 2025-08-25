@@ -8,7 +8,7 @@ from django.db.models import F
 def get_pixels(request):
     qs = Pixel.objects.all().annotate(
         owner_username=F('owner__user__username')  # follow Player -> User -> username
-    ).values('x', 'y', 'owner_username', 'description', 'planted_on')
+    ).values('x', 'y', 'owner_username', 'description', 'planted_on', 'total_xp')
 
     # optionally rename key to 'owner' in the dicts
     pixels = [{**p, 'owner': p.pop('owner_username')} for p in qs]
@@ -41,6 +41,7 @@ def paint_pixel(request):
         'owner': pixel.owner.user.username,
         'description': pixel.description,
         'planted_on': pixel.planted_on.isoformat() if pixel.planted_on else "",
+        'total_xp': pixel.total_xp,
     }
 
     return Response(pixel_data)

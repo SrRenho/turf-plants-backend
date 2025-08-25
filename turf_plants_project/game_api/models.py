@@ -8,6 +8,8 @@ class Pixel(models.Model):
     owner = models.ForeignKey('Player', on_delete=models.CASCADE, related_name='pixels')
     description = models.TextField(blank=True, default="")
     planted_on = models.DateTimeField(auto_now_add=True)
+    total_xp = models.IntegerField(default=0)
+
 
     class Meta:
         unique_together = ('x', 'y')  # avoid duplicates
@@ -18,8 +20,6 @@ class Pixel(models.Model):
 
 class Player(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    level = models.IntegerField(default=1)
-    # add other game-specific fields here
 
     def __str__(self):
         return f"{self.user.username} (Level {self.level})"

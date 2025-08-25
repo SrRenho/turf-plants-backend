@@ -53,6 +53,7 @@ class PixelConsumer(AsyncWebsocketConsumer):
                 "owner": owner_username or player.user.username,
                 "description": pixel.description,
                 "planted_on": pixel.planted_on.isoformat() if pixel.planted_on else "",
+                "total_xp": pixel.total_xp,
             }
 
         pixel_data = await database_sync_to_async(_update_and_serialize)()
