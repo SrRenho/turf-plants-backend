@@ -1,4 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import Pixel, Player
@@ -57,6 +57,7 @@ class CronTokenPermission(BasePermission):
         return token == config('ADMIN_TOKEN')
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([CronTokenPermission])
 def award_hourly_xp(request):
     updated = Pixel.objects.update(total_xp=F('total_xp') + 1)
