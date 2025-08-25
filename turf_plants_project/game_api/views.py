@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from .models import Pixel, Player
 from django.db.models import F
@@ -45,3 +45,10 @@ def paint_pixel(request):
     }
 
     return Response(pixel_data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def award_hourly_xp(request):
+    updated = Pixel.objects.update(total_xp=F('total_xp') + 1)
+    return Response({"success": True, "updated_pixels": updated})
