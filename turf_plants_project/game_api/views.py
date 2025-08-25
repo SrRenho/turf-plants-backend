@@ -6,6 +6,35 @@ from .models import Pixel, Player
 from django.db.models import F
 from decouple import config
 
+import math
+
+a = 5
+r = (8760 / a) ** (1 / 98)
+
+def xp_progress(xp: float):
+    """
+    Given total XP, return:
+      - current level (1–100)
+      - XP already into current level
+      - XP remaining until next level
+    """
+    # geometric inverse: find n s.t. S(n) <= xp < S(n+1)
+
+
+    n = math.floor(math.log(((xp * (r - 1)) / a) + 1, r))
+    level = min(max(1, n + 1), 100)
+
+    # total XP needed to *reach* this level
+    spent = a * (r**n - 1) / (r - 1)
+
+    if level >= 100:
+        return 100, xp - spent, 0.0
+
+    cost = a * r**n
+    into_level = xp - spent
+    to_next = cost - into_level
+    return level, into_level, to_next
+
 @api_view(['GET'])
 def get_pixels(request):
     qs = Pixel.objects.all().annotate(
@@ -13,7 +42,24 @@ def get_pixels(request):
     ).values('x', 'y', 'owner_username', 'description', 'planted_on', 'total_xp')
 
     # optionally rename key to 'owner' in the dicts
-    pixels = [{**p, 'owner': p.pop('owner_username')} for p in qs]
+    pixels = []
+    for p in qs:
+        level, xp_into, xp_until = xp_progress(float(p.get('total_xp', 0) or 0))
+        # convert planted_on if needed
+        planted_on = p.get('planted_on')
+        planted_on_iso = planted_on.isoformat() if planted_on else ""
+        d = {
+            'x': p['x'],
+            'y': p['y'],
+            'owner': p.pop('owner_username'),
+            'description': p['description'],
+            'planted_on': planted_on_iso,
+            'total_xp': p['total_xp'],
+            'level': level,
+            'xp_into_level': xp_into,
+            'xp_until_next': xp_until,
+        }
+        pixels.append(d)
 
     return Response(pixels)
 
@@ -36,6 +82,8 @@ def paint_pixel(request):
         }
     )
 
+    level, xp_into_level, xp_until_next = xp_progress(pixel.total_xp)
+
     # format like GET
     pixel_data = {
         'x': pixel.x,
@@ -44,13 +92,14 @@ def paint_pixel(request):
         'description': pixel.description,
         'planted_on': pixel.planted_on.isoformat() if pixel.planted_on else "",
         'total_xp': pixel.total_xp,
+        'level': level,
+        'xp_into_level': xp_into_level,
+        'xp_until_next': xp_until_next,
     }
 
     return Response(pixel_data)
 
-import logging
 
-log = logging.getLogger(__name__)
 
 @api_view(['POST'])
 @authentication_classes([])
@@ -58,8 +107,6 @@ def award_hourly_xp(request):
     raw = request.headers.get("Authorization") or request.META.get("HTTP_AUTHORIZATION") or ""
     token = raw.replace("Bearer ", "").strip()
 
-    # logging is more reliable than print in prod
-    log.info("cron token received=%r match=%s", token, token == config("ADMIN_TOKEN"))
     if token == config('ADMIN_TOKEN'):
         updated = Pixel.objects.update(total_xp=F('total_xp') + 1)
         return Response({"success": True, "updated_pixels": updated})
