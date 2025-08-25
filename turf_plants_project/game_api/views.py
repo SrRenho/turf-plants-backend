@@ -87,9 +87,15 @@ def award_hourly_xp(request):
     raw = request.headers.get("Authorization") or request.META.get("HTTP_AUTHORIZATION") or ""
     token = raw.replace("Bearer ", "").strip()
 
-    if token == config('ADMIN_TOKEN'):
-        updated = Pixel.objects.update(total_xp=F('total_xp') + 10)
-        return Response({"success": True, "updated_pixels": updated})
+    if token != config('ADMIN_TOKEN'):
+        return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
-    return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+    xp = request.data.get("xp", 1)
+    try:
+        xp = int(xp)
+    except ValueError:
+        return Response({"detail": "Invalid XP value"}, status=status.HTTP_400_BAD_REQUEST)
+
+    updated = Pixel.objects.update(total_xp=F('total_xp') + xp)
+    return Response({"success": True, "updated_pixels": updated})
 
