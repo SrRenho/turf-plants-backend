@@ -53,6 +53,5 @@ def xp_progress(xp: float):
         return 100, max(0.0, into_level), 0.0
 
     cost = xp_for_level(level)
-    to_next = max(0.0, cost - into_level)
-    return level, max(0.0, into_level), to_next
+    return level, max(0.0, into_level), cost
 
