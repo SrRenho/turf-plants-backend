@@ -53,6 +53,7 @@ from decouple import config
 class CronTokenPermission(BasePermission):
     def has_permission(self, request, view):
         token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        print("i received",token)
         return token == config('ADMIN_TOKEN')
 
 @api_view(['POST'])
