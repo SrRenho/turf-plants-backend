@@ -9,21 +9,26 @@ from game_api.level_system import xp_progress
 
 @api_view(['GET'])
 def get_pixels(request):
-    qs = Pixel.objects.all().annotate(
-        owner_username=F('owner__user__username')  # follow Player -> User -> username
-    ).values('x', 'y', 'owner_username', 'description', 'planted_on', 'total_xp')
+    qs = Pixel.objects.select_related('owner__user').all().values(
+        'x', 'y', 'owner__user__username', 'owner__user__first_name', 'owner__user__last_name',
+        'description', 'planted_on', 'total_xp'
+    )
 
-    # optionally rename key to 'owner' in the dicts
     pixels = []
     for p in qs:
+        # compute full name
+        first = p.get('owner__user__first_name', '').strip()
+        last = p.get('owner__user__last_name', '').strip()
+        full_name = f"{first} {last}".strip() or p.get('owner__user__username', '')
+
         level, xp_into, xp_until = xp_progress(float(p.get('total_xp', 0) or 0))
-        # convert planted_on if needed
         planted_on = p.get('planted_on')
         planted_on_iso = planted_on.isoformat() if planted_on else ""
+
         d = {
             'x': p['x'],
             'y': p['y'],
-            'owner': p.pop('owner_username'),
+            'owner': full_name,
             'description': p['description'],
             'planted_on': planted_on_iso,
             'total_xp': p['total_xp'],
@@ -34,6 +39,7 @@ def get_pixels(request):
         pixels.append(d)
 
     return Response(pixels)
+
 
 
 @permission_classes([IsAuthenticated])
@@ -68,7 +74,7 @@ def paint_pixel(request):
     pixel_data = {
         'x': pixel.x,
         'y': pixel.y,
-        'owner': pixel.owner.user.username,
+        'owner': pixel.owner.user.get_full_name() or pixel.owner.user.username,
         'description': pixel.description,
         'planted_on': pixel.planted_on.isoformat() if pixel.planted_on else "",
         'total_xp': pixel.total_xp,
