@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import Pixel, Player
 from django.db.models import F
@@ -47,8 +47,17 @@ def paint_pixel(request):
     return Response(pixel_data)
 
 
+from rest_framework.permissions import BasePermission
+from decouple import config
+
+class CronTokenPermission(BasePermission):
+    def has_permission(self, request, view):
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        return token == config('ADMIN_TOKEN')
+
 @api_view(['POST'])
-@permission_classes([IsAdminUser])
+@permission_classes([CronTokenPermission])
 def award_hourly_xp(request):
     updated = Pixel.objects.update(total_xp=F('total_xp') + 1)
     return Response({"success": True, "updated_pixels": updated})
+
