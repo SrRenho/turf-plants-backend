@@ -5,35 +5,7 @@ from rest_framework import status
 from .models import Pixel, Player
 from django.db.models import F
 from decouple import config
-
-import math
-
-a = 5
-r = (8760 / a) ** (1 / 98)
-
-def xp_progress(xp: float):
-    """
-    Given total XP, return:
-      - current level (1–100)
-      - XP already into current level
-      - XP remaining until next level
-    """
-    # geometric inverse: find n s.t. S(n) <= xp < S(n+1)
-
-
-    n = math.floor(math.log(((xp * (r - 1)) / a) + 1, r))
-    level = min(max(1, n + 1), 100)
-
-    # total XP needed to *reach* this level
-    spent = a * (r**n - 1) / (r - 1)
-
-    if level >= 100:
-        return 100, xp - spent, 0.0
-
-    cost = a * r**n
-    into_level = xp - spent
-    to_next = cost - into_level
-    return level, into_level, to_next
+from game_api.level_system import xp_progress
 
 @api_view(['GET'])
 def get_pixels(request):

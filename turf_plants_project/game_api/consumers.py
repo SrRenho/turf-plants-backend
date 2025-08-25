@@ -1,6 +1,7 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from game_api.level_system import xp_progress
 
 class PixelConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -47,6 +48,8 @@ class PixelConsumer(AsyncWebsocketConsumer):
                 # pixel.owner is a Player instance; access its user.username here (sync)
                 owner_username = pixel.owner.user.username
 
+            level, xp_into_level, xp_until_next = xp_progress(pixel.total_xp)
+
             return {
                 "x": pixel.x,
                 "y": pixel.y,
@@ -54,6 +57,9 @@ class PixelConsumer(AsyncWebsocketConsumer):
                 "description": pixel.description,
                 "planted_on": pixel.planted_on.isoformat() if pixel.planted_on else "",
                 "total_xp": pixel.total_xp,
+                'level': level,
+                'xp_into_level': xp_into_level,
+                'xp_until_next': xp_until_next,
             }
 
         pixel_data = await database_sync_to_async(_update_and_serialize)()
