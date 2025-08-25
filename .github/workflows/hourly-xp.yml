@@ -1,0 +1,13 @@
+name: Award hourly XP
+on:
+  schedule:
+    - cron: '0 * * * *'   # every hour at :00 UTC
+jobs:
+  award:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST award xp
+        run: |
+          curl -X POST "${{ secrets.API_URL }}/game_api/award-hourly-xp" \
+            -H "Authorization: Bearer ${{ secrets.API_TOKEN }}" \
+            -H "Content-Type: application/json"
