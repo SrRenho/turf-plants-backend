@@ -57,9 +57,11 @@ class CronTokenPermission(BasePermission):
         return token == config('ADMIN_TOKEN')
 
 @api_view(['POST'])
-@authentication_classes([])
-@permission_classes([CronTokenPermission])
+#@authentication_classes([])
+#@permission_classes([CronTokenPermission])
 def award_hourly_xp(request):
     updated = Pixel.objects.update(total_xp=F('total_xp') + 1)
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    print("i received",token)
     return Response({"success": True, "updated_pixels": updated})
 
