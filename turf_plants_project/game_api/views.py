@@ -5,85 +5,44 @@ from rest_framework import status
 from .models import Pixel, Player
 from django.db.models import F
 from decouple import config
-from game_api.level_system import xp_progress
+from game_api.services import serialize_pixel, create_pixel_for_player, format_owner_name
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_player(request):
+    player = Player.objects.get(user=request.user)
+    return Response({
+        "seeds": player.seeds,
+    })
 
 @api_view(['GET'])
 def get_pixels(request):
-    qs = Pixel.objects.select_related('owner__user').all().values(
-        'x', 'y', 'owner__user__username', 'owner__user__first_name', 'owner__user__last_name',
-        'description', 'planted_on', 'total_xp'
-    )
-
-    pixels = []
-    for p in qs:
-        # compute full name
-        first = p.get('owner__user__first_name', '').strip()
-        last = p.get('owner__user__last_name', '').strip()
-        full_name = f"{first} {last}".strip() or p.get('owner__user__username', '')
-
-        level, xp_into, xp_until = xp_progress(float(p.get('total_xp', 0) or 0))
-        planted_on = p.get('planted_on')
-        planted_on_iso = planted_on.isoformat() if planted_on else ""
-
-        d = {
-            'x': p['x'],
-            'y': p['y'],
-            'owner': full_name,
-            'description': p['description'],
-            'planted_on': planted_on_iso,
-            'total_xp': p['total_xp'],
-            'level': level,
-            'xp_into_level': xp_into,
-            'xp_until_next': xp_until,
-        }
-        pixels.append(d)
-
-    return Response(pixels)
-
+    pixels = Pixel.objects.select_related('owner__user').all()
+    serialized = [serialize_pixel(p) for p in pixels]
+    return Response(serialized)
 
 
 @permission_classes([IsAuthenticated])
 @api_view(['POST'])
 def paint_pixel(request):
-    x, y = request.data.get('x'), request.data.get('y')
-    description = request.data.get('description')
+    x = request.data.get("x")
+    y = request.data.get("y")
+    description = request.data.get("description", "")
+
     if x is None or y is None:
         return Response({'error': 'x and y required'}, status=400)
 
-    player = Player.objects.get(user=request.user)
+    try:
+        player = Player.objects.get(user=request.user)
+    except Player.DoesNotExist:
+        return Response({'error': 'Player not found'}, status=404)
 
-    if player.seeds < 1:
-        return Response({'error': 'Not enough seeds'}, status=400)
+    result = create_pixel_for_player(player, int(x), int(y), description)
+    if "error" in result:
+        return Response({"error": result["error"]}, status=400)
 
-    pixel, created = Pixel.objects.get_or_create(
-        x=x,
-        y=y,
-        defaults={
-            'owner': player,
-            'description': description,
-        }
-    )
-
-    # only remove a seed if the pixel was actually created
-    if created:
-        player.seeds -= 1
-        player.save()
-
-    level, xp_into_level, xp_until_next = xp_progress(pixel.total_xp)
-
-    pixel_data = {
-        'x': pixel.x,
-        'y': pixel.y,
-        'owner': pixel.owner.user.get_full_name() or pixel.owner.user.username,
-        'description': pixel.description,
-        'planted_on': pixel.planted_on.isoformat() if pixel.planted_on else "",
-        'total_xp': pixel.total_xp,
-        'level': level,
-        'xp_into_level': xp_into_level,
-        'xp_until_next': xp_until_next,
-    }
-
-    return Response(pixel_data)
+    return Response(serialize_pixel(result["pixel"]), status=200)
 
 
 

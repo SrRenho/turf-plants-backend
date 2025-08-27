@@ -17,7 +17,7 @@ class GoogleIDTokenLogin(APIView):
             email = idinfo['email']
             user, created = User.objects.get_or_create(email=email, defaults={'username': email.split('@')[0], 'first_name': idinfo.get('given_name', '')})
 
-            player, _ = Player.objects.get_or_create(user=user)
+            Player.objects.get_or_create(user=user)
 
             refresh = RefreshToken.for_user(user)
             return Response({
@@ -28,7 +28,6 @@ class GoogleIDTokenLogin(APIView):
                     "username": user.username,
                     "first_name": user.first_name,
                     "email": user.email,
-                    "seeds": player.seeds,
                 }
             }, status=status.HTTP_200_OK)
 

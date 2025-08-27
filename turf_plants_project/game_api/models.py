@@ -3,8 +3,8 @@ from django.contrib.auth.models import User
 
 
 class Pixel(models.Model):
-    x = models.IntegerField()
-    y = models.IntegerField()
+    x = models.FloatField()
+    y = models.FloatField()
     owner = models.ForeignKey('Player', on_delete=models.CASCADE, related_name='pixels')
     description = models.TextField(blank=True, default="")
     planted_on = models.DateTimeField(auto_now_add=True)
