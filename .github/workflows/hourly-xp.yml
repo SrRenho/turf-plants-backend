@@ -12,4 +12,3 @@ jobs:
           curl -X POST "${{ secrets.API_URL }}/game_api/award_hourly_xp/" \
             -H "Authorization: Bearer ${{ secrets.API_TOKEN }}" \
             -H "Content-Type: application/json"
-            -d '{"xp": 1}'
